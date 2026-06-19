@@ -1,37 +1,7 @@
 """
 Enunciado:
-Desarrolla una clase en Python que actúe como una fábrica de decoradores para el registro de
-logs, diseñada para facilitar el monitoreo de diferentes aspectos de la ejecución de funciones.
-Esta clase, llamada DecoratorFactoryLogs, debe ofrecer tres tipos de decoradores: uno para
-registrar el inicio y fin de ejecuciones de funciones, otro para detalles de depuración, y un
-tercer decorador que permite guardar los registros en un archivo de log personalizado.
-
-Implementación de la Clase DecoratorFactoryLogs:
-    - log_decorator: Crea un decorador que registre cuando una función inicia y termina su
-    ejecución, incluyendo el nombre de la función, argumentos y valores de los argumentos pasados.
-    - debug_log_decorator: Desarrolla un decorador que registre información detallada útil para
-    la depuración, incluyendo una representación textual de los argumentos y valores de los kwargs
-    pasados a la función.
-    - save_log_decorator: Crea un decorador que registre información en un archivo personalizado,
-    especificado a través de un parámetro en el decorador. Este decorador debe ser capaz de crear
-    y utilizar un logger específico para la función decorada.
-
-Uso de Decoradores:
-    - Aplica el Log Decorator a la función creada llamada add(a, b) que suma dos números.
-    - Utiliza el Debug Log Decorator en la función subtract(a, b) que resta el segundo número del primero.
-    - Emplea el Save Log Decorator en una función multiply(a, b) que multiplica dos números y guarda los
-    registros en un archivo de log personalizado.
-
-Ejemplo de Uso:
-
-factory = DecoratorFactoryLogs()
-@factory.log_decorator(message="Log Decorator:")
-def add(a, b):
-    return a + b
-    
-Salida esperada:
-    2021-08-25 12:00:00,000 - INFO - Log Decorator: Starting: add with args: (2, 3), kwargs: {}
-    2021-08-25 12:00:00,000 - INFO - Log Decorator: Finishing: add
+Implementa una fabrica de decoradores DecoratorFactoryLogs con tres decoradores:
+log_decorator, debug_log_decorator y save_log_decorator.
 """
 
 
@@ -40,12 +10,11 @@ from functools import wraps
 from typing import Callable, Any
 import os
 
-# Ensuring the directory for logs exists
+# directorio para guardar los logs
 log_directory: str = "data/output/logs"
 if not os.path.exists(log_directory):
     os.makedirs(log_directory)
 
-# Configure logging
 logging.basicConfig(
     filename=os.path.join(log_directory, "app.log"),
     level=logging.DEBUG,
@@ -55,37 +24,33 @@ logging.basicConfig(
 
 class DecoratorFactoryLogs:
     def log_decorator(self, message: str = "") -> Callable:
-        """
-        Decorator that logs the start and end of the execution of the function.
-        """
+        """Registra inicio y fin de la funcion."""
 
         def decorator(func: Callable) -> Callable:
-            @wraps
+            @wraps(func)
             def wrapper(*args: Any, **kwargs: Any) -> Any:
                 logging.info(
                     f"{message} Starting: {func.__name__} with args: {args}, kwargs: {kwargs}"
                 )
-                result = func()
+                res = func(*args, **kwargs)
                 logging.info(f"{message} Finishing: {func.__name__}")
-                return
+                return res
 
             return wrapper
 
         return decorator
 
     def debug_log_decorator(self, message: str = "") -> Callable:
-        """
-        Decorator that logs detailed information useful for debugging.
-        """
+        """Registra info de debug con args y kwargs."""
 
         def decorator(func: Callable) -> Callable:
             @wraps(func)
             def wrapper(*args: Any, **kwargs: Any) -> Any:
                 args_repr = [repr(a) for a in args]
                 kwargs_repr = [f"{k}={v!r}" for k, v in kwargs.items()]
-                signature =
-                logging.debug(f"{message} Executing: {func.__name__}({signature})")
-                return 
+                firma = ", ".join(args_repr + kwargs_repr)
+                logging.debug(f"{message} Executing: {func.__name__}({firma})")
+                return func(*args, **kwargs)
 
             return wrapper
 
@@ -96,27 +61,23 @@ class DecoratorFactoryLogs:
         message: str = "",
         filepath: str = os.path.join(log_directory, "custom_log.log"),
     ) -> Callable:
-        """
-        Decorator that logs information to a custom log file.
-        """
+        """Guarda el log en un archivo personalizado."""
 
         def decorator(func: Callable) -> Callable:
-            @wraps
+            @wraps(func)
             def wrapper(*args: Any, **kwargs: Any) -> Any:
-                custom_logger = logging.getLogger(func.__name__)
-                handler = logging.FileHandler(filepath)
-                formatter = logging.Formatter(
-                    "%(asctime)s - %(levelname)s - %(message)s"
-                )
-                handler.
-                custom_logger.
-                custom_logger.
-                custom_logger.info(
+                logger_custom = logging.getLogger(func.__name__)
+                manejador = logging.FileHandler(filepath)
+                fmt = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+                manejador.setFormatter(fmt)
+                logger_custom.addHandler(manejador)
+                logger_custom.setLevel(logging.INFO)
+                logger_custom.info(
                     f"{message} Executing: {func.__name__} with args: {args}, kwargs: {kwargs}"
                 )
-                result = 
-                custom_logger.removeHandler(handler)  # Clean up handler
-                return result
+                res = func(*args, **kwargs)
+                logger_custom.removeHandler(manejador)
+                return res
 
             return wrapper
 
